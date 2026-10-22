@@ -256,6 +256,7 @@ ${media}
     document.getElementById('chat').onclick = function(){ completion('chat') };
     var ig = document.getElementById('ig');
     if (ig) ig.onclick = function(){ completion('ig') };
+    null;
   `, true)
   const choice = await Promise.race([clicked, closed])
 
@@ -265,6 +266,7 @@ ${media}
     await wv.evaluateJavaScript(`
       document.getElementById('btns').style.display='none';
       document.getElementById('done').style.display='block';
+      null;
     `)
     await closed
   } else if (choice === "ig") {
@@ -274,18 +276,6 @@ ${media}
 }
 
 // ---------- spustenie ----------
-if (GITHUB_USER.startsWith("SEM_")) {
-  if (!config.runsInWidget) {
-    const a = new Alert()
-    a.title = "Chýba nastavenie"
-    a.message = "Hore v skripte vyplň GITHUB_USER a GITHUB_REPO."
-    a.addAction("OK")
-    await a.presentAlert()
-  }
-  Script.complete()
-  return
-}
-
 const cfg = await loadConfig()
 const state = readJSON("state.json", null) || { last: today() }
 writeJSON("state.json", state)
