@@ -202,7 +202,12 @@ async function buildWidget(cfg, state) {
 }
 
 // ---------- celá obrazovka ----------
+function sleep(ms) { return new Promise(r => Timer.schedule(ms, false, r)) }
+
 async function fullscreen(cfg, state, params) {
+  // po ťuknutí na widget sa Scriptable ešte len spúšťa – chvíľu počkáme,
+  // inak sa obrazovka nemusí zobraziť (čierna obrazovka)
+  if (params.open) await sleep(800)
   const d = daysSince(state.last)
   const stage = stageFor(d, cfg)
   const text = params.text || randomText(cfg, stage, d)
@@ -283,7 +288,15 @@ writeJSON("state.json", state)
 if (config.runsInWidget) {
   Script.setWidget(await buildWidget(cfg, state))
 } else {
-  await fullscreen(cfg, state, args.queryParameters || {})
+  try {
+    await fullscreen(cfg, state, args.queryParameters || {})
+  } catch (e) {
+    const a = new Alert()
+    a.title = "Chyba"
+    a.message = String(e)
+    a.addAction("OK")
+    await a.presentAlert()
+  }
 }
 
 Script.complete()
