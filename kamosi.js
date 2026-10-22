@@ -212,16 +212,18 @@ async function fullscreen(cfg, state, params) {
   const stage = stageFor(d, cfg)
   const text = params.text || randomText(cfg, stage, d)
   let media = ""
-  let img = null
   let url = params.photo
   if (!url) {
     const photos = (await listStage(stage)).filter(f => IMG.test(f.name))
     url = (pick(photos) || {}).url
   }
-  if (url) { try { img = await new Request(url).loadImage() } catch (e) {} }
   const cachePath = P(`widget-${stage}.jpg`)
-  if (!img && fm.fileExists(cachePath)) img = fm.readImage(cachePath)
-  if (img) media = `<img class="m" src="data:image/jpeg;base64,${Data.fromJPEG(resize(img, 1200, false)).toBase64String()}">`
+  if (url) {
+    // fotku načíta priamo WebView z GitHubu (bez veľkého base64 v HTML)
+    media = `<img class="m" src="${esc(url)}">`
+  } else if (fm.fileExists(cachePath)) {
+    media = `<img class="m" src="data:image/jpeg;base64,${Data.fromJPEG(fm.readImage(cachePath)).toBase64String()}">`
+  }
 
   const showIg = !!(cfg.instagram || "").trim()
 
