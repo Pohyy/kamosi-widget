@@ -47,6 +47,7 @@ const DEFAULTS = {
   },
 }
 
+const VERSION = "4"
 const IMG = /\.(jpe?g|png|heic)$/i
 const RAW = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${BRANCH}`
 const API = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents`
@@ -238,7 +239,8 @@ html,body{height:100%;background:#111;color:#fff;font-family:-apple-system,syste
 .box{position:fixed;left:0;right:0;bottom:0;padding:24px 20px calc(28px + env(safe-area-inset-bottom))}
 h1{font-size:26px;font-weight:800;margin-bottom:6px;line-height:1.2}
 small{display:block;font-size:14px;opacity:.75;margin-bottom:20px}
-button{display:block;width:100%;padding:17px;border:0;border-radius:14px;font-size:17px;font-weight:700;margin-top:10px}
+.btn{display:block;width:100%;padding:17px;border:0;border-radius:14px;font-size:17px;font-weight:700;margin-top:10px;text-align:center;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.v{position:fixed;top:6px;right:10px;font-size:10px;opacity:.4}
 #chat{background:#fff;color:#000}
 #ig{background:linear-gradient(45deg,#f58529,#dd2a7b,#8134af);color:#fff}
 #done{display:none;text-align:center;font-size:18px;font-weight:700;padding:16px 0}
@@ -249,32 +251,40 @@ ${media}
   <h1>${esc(text)}</h1>
   <small>${d === 0 ? "s " + esc(cfg.name) + " ste v kontakte dnes" : "posledný kontakt s " + esc(cfg.name) + ": " + esc(dni(d))}</small>
   <div id="btns">
-    <button id="chat">We were chatting ✅</button>
-    ${showIg ? `<button id="ig">Let's catch up 💬</button>` : ""}
+    <a class="btn" id="chat" href="kamosi://chat">We were chatting ✅</a>
+    ${showIg ? `<a class="btn" id="ig" href="kamosi://ig">Let's catch up 💬</a>` : ""}
   </div>
   <div id="done">✅ Uložené – zavri potiahnutím dole</div>
 </div>
+<div class="v">v${VERSION}</div>
 </body></html>`
 
+  // tlačidlá sú odkazy kamosi://... – zachytíme ich skôr, než sa stránka zmení
   const wv = new WebView()
+  let resolveClick
+  const clicked = new Promise(r => { resolveClick = r })
+  wv.shouldAllowRequest = req => {
+    const u = String(req.url || "")
+    if (u.startsWith("kamosi://")) {
+      resolveClick(u.replace("kamosi://", "").replace(/\/$/, ""))
+      return false
+    }
+    return true
+  }
   await wv.loadHTML(html)
   const closed = wv.present(true).then(() => "closed")
-  const clicked = wv.evaluateJavaScript(`
-    document.getElementById('chat').onclick = function(){ completion('chat') };
-    var ig = document.getElementById('ig');
-    if (ig) ig.onclick = function(){ completion('ig') };
-    null;
-  `, true)
   const choice = await Promise.race([clicked, closed])
 
   if (choice === "chat") {
     state.last = today()
     writeJSON("state.json", state)
-    await wv.evaluateJavaScript(`
-      document.getElementById('btns').style.display='none';
-      document.getElementById('done').style.display='block';
-      null;
-    `)
+    try {
+      await wv.evaluateJavaScript(`
+        document.getElementById('btns').style.display='none';
+        document.getElementById('done').style.display='block';
+        null;
+      `)
+    } catch (e) {}
     await closed
   } else if (choice === "ig") {
     const ig = cfg.instagram.trim().replace(/^@/, "")
